@@ -6,13 +6,17 @@ edition = "2021"
 rust-version = "1.65"
 
 [dependencies]
-egui = "0.22.0"
 eframe = { version = "0.22.0", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
 ] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+egui = "0.22.0"
+serde_json = "1"
 
 [profile.release]
 opt-level = 2 # fast and small wasm
