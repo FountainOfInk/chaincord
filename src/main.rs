@@ -16,14 +16,12 @@ const USER_AGENT: &str = "reallycool https://amongus.rs, 942.3)";
 
 struct AmongUs {
     susser: Susser,
-    reciever: Receiver<String>,
     config: Config,
     current_messages: Vec<Message>
 }
 
 struct Susser {
     client: Client,
-    transmitter: Sender<String>
 }
 
 #[derive(Deserialize)]
@@ -54,8 +52,9 @@ impl AmongUs {
         self.current_messages = Vec::from_iter(message_iter);
     }
     fn set_messages_from_api(&mut self, endpoint: &str) {
-        send_api_request(self.susser.client.clone(), "/reallycoolmessages.json".to_owned(), "GET".to_owned(), self.susser.transmitter.clone());
-        self.current_messages = json_string_to_struct(&self.reciever.recv().expect("Recieving message failed in set_messages_from_api"));
+        let (transmitter, reciever) = channel::<String>();
+        self.send_api_request("/reallycoolmessages.json".to_owned(), "GET".to_owned(), transmitter);
+        self.current_messages = json_string_to_struct(&reciever.recv().expect("Recieving message failed in set_messages_from_api"));
     }
 }
 
@@ -75,15 +74,11 @@ impl App for AmongUs {
 impl AmongUs {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let (transmitter, reciever) = channel::<String>();
-
         let mut app = AmongUs {
             susser: Susser {
                 client: reqwest::Client::new(),
-                transmitter
             },
             config: json_file_to_struct("config.json"),
-            reciever,
             current_messages: vec![],
         };
 
@@ -92,22 +87,24 @@ impl AmongUs {
 
         app
     }
+    pub fn send_api_request(&self, endpoint: String, method: String, transmitter: Sender<String>) {
+        let method = reqwest::Method::from_bytes(method.as_bytes()).expect("Invalid method type in send_api_response");
+        let client = self.susser.client.clone();
+        tokio::spawn(
+            async move {
+                let response = client.request(method, format!("{}{}", BASE_API_URL, endpoint))
+                .send().await
+                .expect("Sending the request failed in send_api_request")
+                .text().await.expect("Unable to get response text in send_api_reqest");
+    
+                transmitter.send(response).expect("Unable to send response string through channel in send_api_request");
+            }
+        );
+        
+    }
     
 }
-fn send_api_request(client: Client, endpoint: String, method: String, transmitter: Sender<String>) {
-    let method = reqwest::Method::from_bytes(method.as_bytes()).expect("Invalid method type in send_api_response");
-    tokio::spawn(
-        async move {
-            let response = client.request(method, format!("{}{}", BASE_API_URL, endpoint))
-            .send().await
-            .expect("Sending the request failed in send_api_request")
-            .text().await.expect("Unable to get response text in send_api_reqest");
 
-            transmitter.send(response).expect("Unable to send response string through channel in send_api_request");
-        }
-    );
-    
-}
 
 fn main() {
     let rt = Runtime::new().expect("Unable to create Runtime");
