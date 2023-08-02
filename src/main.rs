@@ -4,7 +4,7 @@
 mod utils;
 mod amongus;
 mod config;
-mod message;
+mod discord_types;
 
 
 use amongus::AmongUs;

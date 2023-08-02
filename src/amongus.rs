@@ -5,13 +5,13 @@ use eframe::App;
 use egui::{CentralPanel, ScrollArea};
 use crate::utils::json_file_to_struct;
 use crate::config::Config;
-use crate::message::Message;
+use crate::discord_types::{User, Message};
 use crate::utils::json_string_to_struct;
 use susser::Susser;
 
 use reqwest::{self, Method, header::HeaderMap};
 
-const BASE_API_URL: &str = "http://localhost:8000";
+const BASE_API_URL: &str = "https://discord.com/api/v10/";
 
 
 pub struct AmongUs {
@@ -23,8 +23,11 @@ pub struct AmongUs {
 impl AmongUs {
         fn set_dummy_messages_from_iter(&mut self, min: u32, max: u32) {
             let message_iter = (min..max).map(|i| Message {
-                author: format!("Number {} among us fan", i),
-                contents: format!("I love among us {} times more than anything else", i)
+                author: User{
+                    username: format!("Number {} among us fan", i),
+                    id: "432".to_owned()
+                },
+                content: format!("I love among us {} times more than anything else", i)
             });
             self.current_messages = Vec::from_iter(message_iter);
         }
@@ -32,7 +35,11 @@ impl AmongUs {
         fn set_messages_from_api(&mut self, endpoint: &str) {
             let (transmitter, reciever) = channel::<String>();
             self.send_api_request(endpoint.to_owned(), "GET".to_owned(), transmitter);
-            self.current_messages = json_string_to_struct(&reciever.recv().expect("Recieving message failed in set_messages_from_api"));
+            let mut current_messages = json_string_to_struct::<Vec<Message>>(
+                &reciever.recv().expect("Recieving message failed in set_messages_from_api")
+            );
+            current_messages.reverse();
+            self.current_messages = current_messages;
         }
         
         fn send_api_request(&self, endpoint: String, method: String, transmitter: Sender<String>) {
@@ -73,8 +80,8 @@ impl AmongUs {
                 current_messages: vec![],
                 };
         
-                // app.current_messages = json_file_to_struct("messages.json");
-                app.set_messages_from_api("/reallycoolmessages.json");
+                // app.current_messages = json_file_to_struct("");
+                app.set_messages_from_api("channels/1234/messages");
         
                 app
         }                
@@ -86,7 +93,7 @@ impl App for AmongUs {
             let messages_area = ScrollArea::vertical().auto_shrink([false, false]);
             messages_area.show(ui, |ui| {
                 for msg in &self.current_messages {
-                    ui.label(format!("{}:\n{}", msg.author, msg.contents));
+                    ui.label(format!("{}:\n{}", msg.author.username, msg.content));
                 }
             })
         });
