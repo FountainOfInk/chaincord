@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Config {
-        token: String
+        pub token: String,
+        pub user_agent: String,
 }
 

@@ -9,15 +9,13 @@ use crate::message::Message;
 use crate::utils::json_string_to_struct;
 use susser::Susser;
 
-use reqwest::{self, Method};
+use reqwest::{self, Method, header::HeaderMap};
 
 const BASE_API_URL: &str = "http://localhost:8000";
-const USER_AGENT: &str = "reallycool https://amongus.rs, 942.3)";
 
 
 pub struct AmongUs {
         susser: Susser,
-        config: Config,
         current_messages: Vec<Message>
 }
 
@@ -33,7 +31,7 @@ impl AmongUs {
 
         fn set_messages_from_api(&mut self, endpoint: &str) {
             let (transmitter, reciever) = channel::<String>();
-            self.send_api_request("/reallycoolmessages.json".to_owned(), "GET".to_owned(), transmitter);
+            self.send_api_request(endpoint.to_owned(), "GET".to_owned(), transmitter);
             self.current_messages = json_string_to_struct(&reciever.recv().expect("Recieving message failed in set_messages_from_api"));
         }
         
@@ -59,11 +57,19 @@ impl AmongUs {
 impl AmongUs {
         /// Called once before the first frame.
         pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+                let config: Config = json_file_to_struct("config.json");
+
+                let client = reqwest::Client::builder();
+                let mut headers = HeaderMap::new();
+                headers.insert("Authorization", format!("{}{}", "Bot ", config.token).parse().unwrap());
+                let client = client.user_agent(config.user_agent);
+                let client = client.default_headers(headers);
+                let client = client.build().expect("Failed to build client");
+                
                 let mut app = AmongUs {
                 susser: Susser {
-                        client: reqwest::Client::new(),
+                        client
                 },
-                config: json_file_to_struct("config.json"),
                 current_messages: vec![],
                 };
         
