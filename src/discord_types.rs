@@ -8,6 +8,17 @@ pub struct Message {
 
 #[derive(Deserialize)]
 pub struct User {
-    pub id: String,             // actually a snowflake, might implement later
+    pub id: Snowflake,
     pub username: String
 }
+
+
+#[derive(Deserialize)]
+pub struct ApiError {
+    pub code: u32,
+    // TODO: errors field
+    pub message: String 
+}
+
+// TODO: actually implement snowflake
+type Snowflake = String;
