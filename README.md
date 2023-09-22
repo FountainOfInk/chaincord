@@ -1,2 +1,2 @@
-# Chaincord
-A fast (hopefully) Discord client written in Rust, using ewebsock, reqwest, and egui.
+# Chaincord (Work in Progress)
+A Discord client written in Rust, using ewebsock, reqwest, and egui.
